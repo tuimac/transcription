@@ -33,7 +33,7 @@
       
       homepage();
       function homepage() {
-        s3.listObjects({ Delimiter: '/results' }, function(err, data) {
+        s3.listObjects(function(err, data) {
           if(err) {
             return alert(err.message);
           } else {
