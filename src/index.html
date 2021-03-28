@@ -3,10 +3,96 @@
   <head>
     <meta charset='utf-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'>
-    <link rel='stylesheet' href='{% static 'css/bootstrap.min.css' %}'>
     <!-- https://github.com/aws/aws-sdk-js -->
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.874.0.min.js"></script>
+    <script rel='javascript' src="https://sdk.amazonaws.com/js/aws-sdk-2.874.0.min.js"></script>
+  </head>
   <body>
-    hello
+    <div id='home'></div>
+    <script type='text/javascript'>
+      var s3bucketName = '000-transcription';
+      var cognitoIdPoolId = 'ap-northeast-1:a16a9f69-7440-4be9-b89e-52a034a7b485';
+      var region = 'ap-northeast-1';
+
+      AWS.config.update({
+        region: region,
+        credentials: new AWS.CognitoIdentityCredentials({
+          IdentityPoolId: cognitoIdPoolId
+        })
+      });
+
+      var s3 = new AWS.S3({
+        apiVersion: '2006-03-01',
+        params: {
+          Bucket: s3bucketName
+        }
+      });
+
+      function getHtml(template) {
+        return template.join('\n');
+      };
+      
+      homepage();
+      function homepage() {
+        s3.listObjects({ Delimiter: '/results' }, function(err, data) {
+          if(err) {
+            return alert(err.message);
+          } else {
+            var fileNames = data.CommonPrefixes.map(function (commonPrefix) {
+              var prefix = commonPrefix.Prefix;
+              var fileName = decodeURIComponent(prefix.replace("/", ""));
+              return getHtml([
+                '<tr>',
+                '<td>',
+                fileName,
+                '</td>',
+                '<td>',
+                '<span onclick=\"getObject("' + fileName + '")\">X</span>',
+                '</td>',
+                '</tr>'
+              ]);
+            });
+            var template = [
+              '<div>',
+              '<table>',
+              '<tr>',
+              '<th>FileName</th>',
+              '<th>Download</th>',
+              '</tr>',
+              getHtml(fileNames),
+              '</table>',
+              '</div>',
+              '<input id="audioFile" type="file" accept=".mp4, .wav, mp3, .flac, .ogg, .webm, .amr">',
+              '<button id="uploadFile" onclick="uploadFile()">'
+            ];
+            document.getElementById('home').innerHTML = getHtml(template);
+          }
+        });
+      };
+      
+      function uploadFile() {
+        var files = document.getElementById('audioFile').files;
+        if (!files.length) {
+          return alert('Please choose a file to upload first.');
+        } else {
+          var file = files[0];
+          var fileName = file.name;
+          s3.upload({
+            Key: 'upload',
+            Body: file,
+            ACL: 'public-read'
+          }, function(err, data) {
+            if(err) {
+              alert(err.message);
+            }
+            alert('Successfully uploaded photo.');
+          });
+        }
+      };
+
+      function getObject() {
+        alert('test');
+      };
+
+    </script>
   </body>
 </html>
